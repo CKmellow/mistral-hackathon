@@ -69,6 +69,70 @@ app.post('/api/mistral', async (req, res) => {
   }
 });
 
+// Provide community interview questions for Pamoja Hub
+app.get('/api/mistral-questions', (req, res) => {
+  res.json({
+    questions: [
+      {
+        question: "What skills do you have that might help neighbors?",
+        name: "skills",
+        placeholder: "e.g. Cooking, carpentry, first aid, driving..."
+      },
+      {
+        question: "What kind of support might you need sometimes?",
+        name: "support",
+        placeholder: "e.g. Childcare, errands, tech help..."
+      },
+      {
+        question: "Do you speak any other languages?",
+        name: "languages",
+        placeholder: "e.g. Swahili, French, sign language..."
+      },
+      {
+        question: "Do you have any medical or emergency training?",
+        name: "medical",
+        placeholder: "e.g. Nurse, CPR certified, none..."
+      }
+    ]
+  });
+});
+
+// Community Interview AI summary and feedback endpoint
+app.post('/api/mistral-summary', async (req, res) => {
+  const { skills, support, languages, medical } = req.body;
+  try {
+    const prompt = `Here are my answers for a community mutual aid interview.\nSkills: ${skills}\nSupport needed: ${support}\nLanguages: ${languages}\nMedical/Emergency: ${medical}\n\nPlease provide a friendly, short summary of how I can help and what I might need, as if for a community dashboard. Then, give 1-2 sentences of constructive feedback or encouragement for this person as a community member.`;
+    const response = await axios.post(
+      'https://api.mistral.ai/v1/chat/completions',
+      {
+        model: 'mistral-small',
+        messages: [
+          { role: 'system', content: 'You are a helpful, community-focused assistant for a mutual aid platform.' },
+          { role: 'user', content: prompt }
+        ]
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    const content = response.data.choices[0].message.content;
+    // Try to split summary and feedback if possible
+    let summary = content;
+    let feedback = "";
+    const split = content.split(/Feedback:|Encouragement:|\n\n/);
+    if (split.length > 1) {
+      summary = split[0].trim();
+      feedback = split.slice(1).join(' ').trim();
+    }
+    res.json({ summary, feedback });
+  } catch (error) {
+    console.error('Mistral summary error:', error.response?.data || error.message);
+    res.status(500).json({ summary: '', feedback: '', error: 'Failed to get summary from Mistral' });
+  }
+});
 
 // Start the server
 app.listen(port, () => {

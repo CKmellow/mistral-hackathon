@@ -9,6 +9,10 @@ const PamojaHubOnboarding = () => {
   const [interviewStep, setInterviewStep] = useState(0);
   const [interviewData, setInterviewData] = useState({ skills: '', support: '', languages: '', medical: '' });
   const [interviewDone, setInterviewDone] = useState(false);
+  const [aiSummary, setAiSummary] = useState("");
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [dynamicQuestions, setDynamicQuestions] = useState([]);
+  const [questionError, setQuestionError] = useState("");
 
   useEffect(() => {
     setIsVisible(true);
@@ -38,28 +42,28 @@ const PamojaHubOnboarding = () => {
     }
   ];
 
-  const interviewQuestions = [
-    {
-      question: "What skills do you have that might help neighbors?",
-      name: "skills",
-      placeholder: "e.g. Cooking, carpentry, first aid, driving..."
-    },
-    {
-      question: "What kind of support might you need sometimes?",
-      name: "support",
-      placeholder: "e.g. Childcare, errands, tech help..."
-    },
-    {
-      question: "Do you speak any other languages?",
-      name: "languages",
-      placeholder: "e.g. Swahili, French, sign language..."
-    },
-    {
-      question: "Do you have any medical or emergency training?",
-      name: "medical",
-      placeholder: "e.g. Nurse, CPR certified, none..."
+  useEffect(() => {
+    async function fetchQuestions() {
+      try {
+        const response = await fetch("/api/mistral-questions");
+        if (!response.ok) throw new Error("Failed to fetch questions");
+        const data = await response.json();
+        if (Array.isArray(data.questions) && data.questions.length > 0) {
+          setDynamicQuestions(data.questions);
+          setQuestionError("");
+        } else {
+          setDynamicQuestions([]);
+          setQuestionError("No interview questions available.");
+        }
+      } catch (err) {
+        setDynamicQuestions([]);
+        setQuestionError("Could not load interview questions. Please try again later.");
+      }
     }
-  ];
+    fetchQuestions();
+  }, []);
+
+  const interviewQuestions = dynamicQuestions;
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -74,17 +78,44 @@ const PamojaHubOnboarding = () => {
     setInterviewData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleInterviewNext = (e) => {
+  // Call Mistral API for AI summary
+  async function getMistralSummary(interviewData) {
+    setLoadingSummary(true);
+    setAiSummary("");
+    try {
+      const prompt = `Here are my answers for a community mutual aid interview.\nSkills: ${interviewData.skills}\nSupport needed: ${interviewData.support}\nLanguages: ${interviewData.languages}\nMedical/Emergency: ${interviewData.medical}\n\nPlease provide a friendly, short summary of how I can help and what I might need, as if for a community dashboard.`;
+      const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer YOUR_MISTRAL_API_KEY",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "mistral-tiny",
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await response.json();
+      setAiSummary(data.choices?.[0]?.message?.content || "(No summary returned)");
+    } catch (err) {
+      setAiSummary("Could not fetch AI summary.");
+    }
+    setLoadingSummary(false);
+  }
+
+  const handleInterviewNext = async (e) => {
     e.preventDefault();
     if (interviewStep < interviewQuestions.length - 1) {
       setInterviewStep((s) => s + 1);
     } else {
       setInterviewDone(true);
+      await getMistralSummary(interviewData);
       setTimeout(() => {
         setShowInterview(false);
         setInterviewDone(false);
         setInterviewStep(0);
-      }, 2500);
+        setAiSummary("");
+      }, 5000);
     }
   };
 
@@ -175,6 +206,13 @@ const PamojaHubOnboarding = () => {
           </div>
         </div>
 
+        {/* Community Interview Button */}
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '1.5rem 0', padding: '0 1.5rem' }}>
+          <button className="btn btn-main" onClick={() => setShowInterview(true)}>
+            <UserPlus style={{ marginRight: 8 }} /> Community Interview
+          </button>
+        </div>
+
         {/* Bottom Action Area */}
         <div className="bottom-action">
           <div className="bottom-buttons">
@@ -213,18 +251,7 @@ const PamojaHubOnboarding = () => {
         </div>
       </div>
 
-      {/* Community Interview Button */}
-      <div style={{ display: 'flex', justifyContent: 'center', margin: '1.5rem 0' }}>
-        <button className="btn btn-main" onClick={() => { 
-          console.log('Interview button clicked, showInterview before:', showInterview);
-          setShowInterview(true);
-        }}>
-          <UserPlus style={{ marginRight: 8 }} /> Community Interview
-        </button>
-      </div>
-
       {/* Community Interview Modal */}
-      {console.log('Rendering, showInterview:', showInterview)}
       {showInterview && (
         <div className="event-modal-overlay">
           <div className="event-modal">
@@ -233,30 +260,37 @@ const PamojaHubOnboarding = () => {
               <div>
                 <h2 className="event-modal-title">Your Mutual Aid Map</h2>
                 <div style={{ margin: '1.2rem 0', color: '#312e81', fontWeight: 500 }}>
-                  <div><b>Skills you can offer:</b> {interviewData.skills || '—'}</div>
-                  <div><b>Support you might need:</b> {interviewData.support || '—'}</div>
-                  <div><b>Languages:</b> {interviewData.languages || '—'}</div>
-                  <div><b>Medical/Emergency Training:</b> {interviewData.medical || '—'}</div>
+                  {interviewQuestions.map((q, idx) => (
+                    <div key={q.name}><b>{q.question}</b> {interviewData[q.name] || '—'}</div>
+                  ))}
                 </div>
                 <div className="event-success">Thank you for sharing!<br/>Your skills and needs help build a stronger community.</div>
+                <div style={{marginTop: '1.5rem'}}>
+                  <b>AI Summary:</b><br/>
+                  {loadingSummary ? <span>Loading summary...</span> : aiSummary ? <span>{aiSummary}</span> : <span style={{color:'#b91c1c'}}>Could not fetch summary. Please try again later.</span>}
+                </div>
               </div>
             ) : (
-              <form onSubmit={handleInterviewNext}>
-                <h2 className="event-modal-title">{interviewQuestions[interviewStep].question}</h2>
-                <input
-                  type="text"
-                  name={interviewQuestions[interviewStep].name}
-                  value={interviewData[interviewQuestions[interviewStep].name]}
-                  onChange={handleInterviewInput}
-                  className="event-modal-input"
-                  placeholder={interviewQuestions[interviewStep].placeholder}
-                  required
-                  autoFocus
-                />
-                <button type="submit" className="btn btn-main" style={{ width: '100%', marginTop: '1.2rem' }}>
-                  {interviewStep === interviewQuestions.length - 1 ? 'Finish' : 'Next'}
-                </button>
-              </form>
+              interviewQuestions.length === 0 ? (
+                <div style={{color:'#b91c1c', fontWeight:600, textAlign:'center', padding:'2rem 0'}}>{questionError}</div>
+              ) : (
+                <form onSubmit={handleInterviewNext}>
+                  <h2 className="event-modal-title">{interviewQuestions[interviewStep].question}</h2>
+                  <input
+                    type="text"
+                    name={interviewQuestions[interviewStep].name}
+                    value={interviewData[interviewQuestions[interviewStep].name]}
+                    onChange={handleInterviewInput}
+                    className="event-modal-input"
+                    placeholder={interviewQuestions[interviewStep].placeholder}
+                    required
+                    autoFocus
+                  />
+                  <button type="submit" className="btn btn-main" style={{ width: '100%', marginTop: '1.2rem' }}>
+                    {interviewStep === interviewQuestions.length - 1 ? 'Finish' : 'Next'}
+                  </button>
+                </form>
+              )
             )}
           </div>
         </div>
