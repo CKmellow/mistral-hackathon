@@ -2,17 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Users, Send, MessageSquare, Smile, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const demoContacts = [
-  { id: 1, name: 'Sarah M.', avatar: 'SM', online: true },
-  { id: 2, name: 'Alex K.', avatar: 'AK', online: false },
-  { id: 3, name: 'Maria L.', avatar: 'ML', online: true },
-];
 
-const demoMessages = [
-  { id: 1, sender: 'Sarah M.', text: 'Hey! Are you coming to the event tomorrow?', time: '09:15', mine: false },
-  { id: 2, sender: 'You', text: 'Yes! I’ll bring snacks 😊', time: '09:16', mine: true },
-  { id: 3, sender: 'Sarah M.', text: 'Awesome, see you there!', time: '09:17', mine: false },
-];
 
 const ChatPage = () => {
   const [messages, setMessages] = useState(demoMessages);
