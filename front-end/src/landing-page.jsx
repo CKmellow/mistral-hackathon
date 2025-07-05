@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Users, Heart, Shield, MapPin, Sparkles, ArrowRight, Download } from 'lucide-react';
+import { ChevronRight, Users, Heart, Shield, MapPin, Sparkles, ArrowRight, Download, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const PamojaHubOnboarding = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [showInterview, setShowInterview] = useState(false);
+  const [interviewStep, setInterviewStep] = useState(0);
+  const [interviewData, setInterviewData] = useState({ skills: '', support: '', languages: '', medical: '' });
+  const [interviewDone, setInterviewDone] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -15,12 +19,12 @@ const PamojaHubOnboarding = () => {
       icon: <Users className="w-16 h-16 text-orange-500" />,
       title: "Build Community Resilience",
       subtitle: "Connect with neighbors you've never met",
-      description: "Ubuntu Connect uses AI to weave together community networks that strengthen neighborhoods and build lasting connections between people who can help each other thrive.",
+      description: "Pamoja Hub uses AI to weave together community networks that strengthen neighborhoods and build lasting connections between people who can help each other thrive.",
       gradient: "from-orange-500 to-pink-500"
     },
     {
       icon: <Heart className="w-16 h-16 text-purple-500" />,
-      title: "Ubuntu Philosophy",
+      title: "Pamoja Hub",
       subtitle: "I am because we are",
       description: "Rooted in the African philosophy of Ubuntu, our platform believes that individual wellbeing is deeply connected to community wellbeing. Together, we're stronger.",
       gradient: "from-purple-500 to-indigo-500"
@@ -34,12 +38,54 @@ const PamojaHubOnboarding = () => {
     }
   ];
 
+  const interviewQuestions = [
+    {
+      question: "What skills do you have that might help neighbors?",
+      name: "skills",
+      placeholder: "e.g. Cooking, carpentry, first aid, driving..."
+    },
+    {
+      question: "What kind of support might you need sometimes?",
+      name: "support",
+      placeholder: "e.g. Childcare, errands, tech help..."
+    },
+    {
+      question: "Do you speak any other languages?",
+      name: "languages",
+      placeholder: "e.g. Swahili, French, sign language..."
+    },
+    {
+      question: "Do you have any medical or emergency training?",
+      name: "medical",
+      placeholder: "e.g. Nurse, CPR certified, none..."
+    }
+  ];
+
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
   };
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const handleInterviewInput = (e) => {
+    const { name, value } = e.target;
+    setInterviewData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleInterviewNext = (e) => {
+    e.preventDefault();
+    if (interviewStep < interviewQuestions.length - 1) {
+      setInterviewStep((s) => s + 1);
+    } else {
+      setInterviewDone(true);
+      setTimeout(() => {
+        setShowInterview(false);
+        setInterviewDone(false);
+        setInterviewStep(0);
+      }, 2500);
+    }
   };
 
   const FloatingOrb = ({ delay = 0, size = 'orb-small' }) => (
@@ -166,6 +212,55 @@ const PamojaHubOnboarding = () => {
           </div>
         </div>
       </div>
+
+      {/* Community Interview Button */}
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '1.5rem 0' }}>
+        <button className="btn btn-main" onClick={() => { 
+          console.log('Interview button clicked, showInterview before:', showInterview);
+          setShowInterview(true);
+        }}>
+          <UserPlus style={{ marginRight: 8 }} /> Community Interview
+        </button>
+      </div>
+
+      {/* Community Interview Modal */}
+      {console.log('Rendering, showInterview:', showInterview)}
+      {showInterview && (
+        <div className="event-modal-overlay">
+          <div className="event-modal">
+            <button className="event-modal-close" onClick={() => setShowInterview(false)}>&times;</button>
+            {interviewDone ? (
+              <div>
+                <h2 className="event-modal-title">Your Mutual Aid Map</h2>
+                <div style={{ margin: '1.2rem 0', color: '#312e81', fontWeight: 500 }}>
+                  <div><b>Skills you can offer:</b> {interviewData.skills || '—'}</div>
+                  <div><b>Support you might need:</b> {interviewData.support || '—'}</div>
+                  <div><b>Languages:</b> {interviewData.languages || '—'}</div>
+                  <div><b>Medical/Emergency Training:</b> {interviewData.medical || '—'}</div>
+                </div>
+                <div className="event-success">Thank you for sharing!<br/>Your skills and needs help build a stronger community.</div>
+              </div>
+            ) : (
+              <form onSubmit={handleInterviewNext}>
+                <h2 className="event-modal-title">{interviewQuestions[interviewStep].question}</h2>
+                <input
+                  type="text"
+                  name={interviewQuestions[interviewStep].name}
+                  value={interviewData[interviewQuestions[interviewStep].name]}
+                  onChange={handleInterviewInput}
+                  className="event-modal-input"
+                  placeholder={interviewQuestions[interviewStep].placeholder}
+                  required
+                  autoFocus
+                />
+                <button type="submit" className="btn btn-main" style={{ width: '100%', marginTop: '1.2rem' }}>
+                  {interviewStep === interviewQuestions.length - 1 ? 'Finish' : 'Next'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

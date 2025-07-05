@@ -2,13 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, MapPin, Shield, Heart, Bell, ArrowRight, Plus, 
   TrendingUp, MessageSquare, Calendar, Gift, AlertCircle,
-  Home, Zap, Star, Clock, ChevronRight
+  Home, Zap, Star, Clock, ChevronRight, UserPlus
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PamojaDashboard = () => {
+  const navigate = useNavigate();
   const [timeOfDay, setTimeOfDay] = useState('morning');
   const [activeRequests, setActiveRequests] = useState(3);
   const [communityScore, setCommunityScore] = useState(85);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [eventForm, setEventForm] = useState({ name: '', date: '', description: '' });
+  const [eventSuccess, setEventSuccess] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [helpForm, setHelpForm] = useState({ category: '', description: '', availability: '' });
+  const [helpSuccess, setHelpSuccess] = useState(false);
+  const [showResourceModal, setShowResourceModal] = useState(false);
+  const [resourceImage, setResourceImage] = useState(null);
+  const [resourceImagePreview, setResourceImagePreview] = useState(null);
+  const [resourceForm, setResourceForm] = useState({ type: '', description: '', quantity: '', location: '' });
+  const [resourceSuccess, setResourceSuccess] = useState(false);
+  const [showInterview, setShowInterview] = useState(false);
+  const [interviewStep, setInterviewStep] = useState(0);
+  const [interviewData, setInterviewData] = useState({ skills: '', support: '', languages: '', medical: '' });
+  const [interviewDone, setInterviewDone] = useState(false);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -61,17 +78,145 @@ const PamojaDashboard = () => {
     }
   ];
 
+  const helpCategories = [
+    'Grocery Shopping',
+    'Childcare',
+    'Tech Help',
+    'Pet Care',
+    'Tutoring',
+    'Other'
+  ];
+
+  const resourceTypes = [
+    'Food',
+    'Books',
+    'Clothes',
+    'Tools',
+    'Toys',
+    'Other'
+  ];
+
+  // Add Create Event button to Quick Actions
   const quickActions = [
-    { icon: <Heart className="icon" />, label: "Offer Help", colorClass: "quick-action-green" },
-    { icon: <Gift className="icon" />, label: "Share Resources", colorClass: "quick-action-blue" },
-    { icon: <Calendar className="icon" />, label: "Create Event", colorClass: "quick-action-purple" },
-    { icon: <MessageSquare className="icon" />, label: "Chat", colorClass: "quick-action-orange" }
+    { icon: <Heart className="icon" />, label: "Offer Help", colorClass: "quick-action-green", onClick: () => setShowHelpModal(true) },
+    { icon: <Gift className="icon" />, label: "Share Resources", colorClass: "quick-action-blue", onClick: () => setShowResourceModal(true) },
+    { icon: <Calendar className="icon" />, label: "Create Event", colorClass: "quick-action-purple", onClick: () => setShowEventModal(true) },
+    { icon: <MessageSquare className="icon" />, label: "Chat", colorClass: "quick-action-orange", onClick: () => navigate('/chat') }
   ];
 
   const communityStats = [
     { label: "Active Neighbors", value: "24", icon: <Users className="icon" />, trend: "+3" },
     { label: "Mutual Aid Actions", value: "47", icon: <Heart className="icon" />, trend: "+12" },
     { label: "Community Score", value: `${communityScore}%`, icon: <Star className="icon" />, trend: "+5%" }
+  ];
+
+  const handleEventInput = (e) => {
+    const { name, value } = e.target;
+    setEventForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleEventSubmit = (e) => {
+    e.preventDefault();
+    setEventSuccess(true);
+    setTimeout(() => {
+      setShowEventModal(false);
+      setEventSuccess(false);
+      setEventForm({ name: '', date: '', description: '' });
+    }, 1500);
+  };
+
+  const handleHelpInput = (e) => {
+    const { name, value } = e.target;
+    setHelpForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleHelpCategory = (cat) => {
+    setHelpForm((prev) => ({ ...prev, category: cat }));
+  };
+
+  const handleHelpSubmit = (e) => {
+    e.preventDefault();
+    setHelpSuccess(true);
+    setTimeout(() => {
+      setShowHelpModal(false);
+      setHelpSuccess(false);
+      setHelpForm({ category: '', description: '', availability: '' });
+    }, 1500);
+  };
+
+  const handleResourceInput = (e) => {
+    const { name, value } = e.target;
+    setResourceForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleResourceImage = (e) => {
+    const file = e.target.files[0];
+    setResourceImage(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setResourceImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    } else {
+      setResourceImagePreview(null);
+    }
+  };
+
+  const handleResourceType = (type) => {
+    setResourceForm((prev) => ({ ...prev, type }));
+  };
+
+  const handleResourceSubmit = (e) => {
+    e.preventDefault();
+    setResourceSuccess(true);
+    setTimeout(() => {
+      setShowResourceModal(false);
+      setResourceSuccess(false);
+      setResourceForm({ type: '', description: '', quantity: '', location: '' });
+      setResourceImage(null);
+      setResourceImagePreview(null);
+    }, 1500);
+  };
+
+  const handleInterviewInput = (e) => {
+    const { name, value } = e.target;
+    setInterviewData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleInterviewNext = (e) => {
+    e.preventDefault();
+    if (interviewStep < interviewQuestions.length - 1) {
+      setInterviewStep((s) => s + 1);
+    } else {
+      setInterviewDone(true);
+      setTimeout(() => {
+        setShowInterview(false);
+        setInterviewDone(false);
+        setInterviewStep(0);
+      }, 2500);
+    }
+  };
+
+  const interviewQuestions = [
+    {
+      question: "What skills do you have that might help neighbors?",
+      name: "skills",
+      placeholder: "e.g. Cooking, carpentry, first aid, driving..."
+    },
+    {
+      question: "What kind of support might you need sometimes?",
+      name: "support",
+      placeholder: "e.g. Childcare, errands, tech help..."
+    },
+    {
+      question: "Do you speak any other languages?",
+      name: "languages",
+      placeholder: "e.g. Swahili, French, sign language..."
+    },
+    {
+      question: "Do you have any medical or emergency training?",
+      name: "medical",
+      placeholder: "e.g. Nurse, CPR certified, none..."
+    }
   ];
 
   return (
@@ -133,6 +278,7 @@ const PamojaDashboard = () => {
               <button
                 key={index}
                 className={`dashboard-quick-action ${action.colorClass}`}
+                onClick={action.onClick}
               >
                 <div className="dashboard-quick-action-icon">
                   {action.icon}
@@ -264,6 +410,246 @@ const PamojaDashboard = () => {
           </button>
         </div>
       </div>
+      {/* Event Modal Popup */}
+      {showEventModal && (
+        <div className="event-modal-overlay">
+          <div className="event-modal">
+            <button className="event-modal-close" onClick={() => setShowEventModal(false)}>&times;</button>
+            {eventSuccess ? (
+              <div className="event-success">Event created successfully!</div>
+            ) : (
+              <form onSubmit={handleEventSubmit}>
+                <h2 className="event-modal-title">Create Community Event</h2>
+                <label className="event-modal-label">
+                  Event Name
+                  <input
+                    type="text"
+                    name="name"
+                    value={eventForm.name}
+                    onChange={handleEventInput}
+                    className="event-modal-input"
+                    required
+                  />
+                </label>
+                <label className="event-modal-label">
+                  Date
+                  <input
+                    type="date"
+                    name="date"
+                    value={eventForm.date}
+                    onChange={handleEventInput}
+                    className="event-modal-input"
+                    required
+                  />
+                </label>
+                <label className="event-modal-label">
+                  Description
+                  <textarea
+                    name="description"
+                    value={eventForm.description}
+                    onChange={handleEventInput}
+                    className="event-modal-input"
+                    rows={3}
+                    required
+                  />
+                </label>
+                <button type="submit" className="btn btn-main" style={{ width: '100%', marginTop: '1rem' }}>
+                  Create Event
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Offer Help Modal Popup */}
+      {showHelpModal && (
+        <div className="event-modal-overlay">
+          <div className="event-modal">
+            <button className="event-modal-close" onClick={() => setShowHelpModal(false)}>&times;</button>
+            {helpSuccess ? (
+              <div className="event-success">Thank you for offering help!</div>
+            ) : (
+              <form onSubmit={handleHelpSubmit}>
+                <h2 className="event-modal-title">Offer Help</h2>
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ fontWeight: 500, marginBottom: '0.5rem' }}>Select a Category</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {helpCategories.map((cat) => (
+                      <button
+                        type="button"
+                        key={cat}
+                        className={`help-category-btn${helpForm.category === cat ? ' selected' : ''}`}
+                        onClick={() => handleHelpCategory(cat)}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="event-modal-label">
+                  Description
+                  <textarea
+                    name="description"
+                    value={helpForm.description}
+                    onChange={handleHelpInput}
+                    className="event-modal-input"
+                    rows={3}
+                    required
+                  />
+                </label>
+                <label className="event-modal-label">
+                  Availability
+                  <input
+                    type="text"
+                    name="availability"
+                    value={helpForm.availability}
+                    onChange={handleHelpInput}
+                    className="event-modal-input"
+                    placeholder="e.g. Weekends, Evenings, etc."
+                    required
+                  />
+                </label>
+                <button type="submit" className="btn btn-main" style={{ width: '100%', marginTop: '1rem' }}>
+                  Offer Help
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Share Resources Modal Popup */}
+      {showResourceModal && (
+        <div className="event-modal-overlay">
+          <div className="event-modal">
+            <button className="event-modal-close" onClick={() => setShowResourceModal(false)}>&times;</button>
+            {resourceSuccess ? (
+              <div className="event-success">Resource shared successfully!</div>
+            ) : (
+              <form onSubmit={handleResourceSubmit}>
+                <h2 className="event-modal-title">Share a Resource</h2>
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ fontWeight: 500, marginBottom: '0.5rem' }}>Select Resource Type</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {resourceTypes.map((type) => (
+                      <button
+                        type="button"
+                        key={type}
+                        className={`help-category-btn${resourceForm.type === type ? ' selected' : ''}`}
+                        onClick={() => handleResourceType(type)}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="event-modal-label">
+                  Description
+                  <textarea
+                    name="description"
+                    value={resourceForm.description}
+                    onChange={handleResourceInput}
+                    className="event-modal-input"
+                    rows={3}
+                    required
+                  />
+                </label>
+                <label className="event-modal-label">
+                  Quantity
+                  <input
+                    type="text"
+                    name="quantity"
+                    value={resourceForm.quantity}
+                    onChange={handleResourceInput}
+                    className="event-modal-input"
+                    placeholder="e.g. 2 bags, 5 books, etc."
+                    required
+                  />
+                </label>
+                <label className="event-modal-label">
+                  Pickup Location (optional)
+                  <input
+                    type="text"
+                    name="location"
+                    value={resourceForm.location}
+                    onChange={handleResourceInput}
+                    className="event-modal-input"
+                    placeholder="e.g. 123 Main St, Community Center, etc."
+                  />
+                </label>
+                <label className="event-modal-label">
+                  Photo (optional)
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleResourceImage}
+                    className="event-modal-input"
+                    style={{ padding: 0, border: 'none', background: 'none' }}
+                  />
+                </label>
+                {resourceImagePreview && (
+                  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                    <img src={resourceImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '0.7rem', boxShadow: '0 2px 8px #0002' }} />
+                  </div>
+                )}
+                <button type="submit" className="btn btn-main" style={{ width: '100%', marginTop: '1rem' }}>
+                  Share Resource
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Community Interview Button */}
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '1.5rem 0' }}>
+        <button className="btn btn-main" onClick={() => { 
+          console.log('Interview button clicked, showInterview before:', showInterview);
+          setShowInterview(true);
+        }}>
+          <UserPlus style={{ marginRight: 8 }} /> Community Interview
+        </button>
+      </div>
+
+      {/* Community Interview Modal */}
+      {console.log('Rendering, showInterview:', showInterview)}
+      {showInterview && (
+        <div className="event-modal-overlay">
+          <div className="event-modal">
+            <button className="event-modal-close" onClick={() => setShowInterview(false)}>&times;</button>
+            {interviewDone ? (
+              <div>
+                <h2 className="event-modal-title">Your Mutual Aid Map</h2>
+                <div style={{ margin: '1.2rem 0', color: '#312e81', fontWeight: 500 }}>
+                  <div><b>Skills you can offer:</b> {interviewData.skills || '—'}</div>
+                  <div><b>Support you might need:</b> {interviewData.support || '—'}</div>
+                  <div><b>Languages:</b> {interviewData.languages || '—'}</div>
+                  <div><b>Medical/Emergency Training:</b> {interviewData.medical || '—'}</div>
+                </div>
+                <div className="event-success">Thank you for sharing!<br/>Your skills and needs help build a stronger community.</div>
+              </div>
+            ) : (
+              <form onSubmit={handleInterviewNext}>
+                <h2 className="event-modal-title">{interviewQuestions[interviewStep].question}</h2>
+                <input
+                  type="text"
+                  name={interviewQuestions[interviewStep].name}
+                  value={interviewData[interviewQuestions[interviewStep].name]}
+                  onChange={handleInterviewInput}
+                  className="event-modal-input"
+                  placeholder={interviewQuestions[interviewStep].placeholder}
+                  required
+                  autoFocus
+                />
+                <button type="submit" className="btn btn-main" style={{ width: '100%', marginTop: '1.2rem' }}>
+                  {interviewStep === interviewQuestions.length - 1 ? 'Finish' : 'Next'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
